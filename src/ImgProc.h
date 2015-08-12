@@ -7,6 +7,8 @@
 
 class ImgProc: public node::ObjectWrap {
 public:
+	cv::Mat mask;
+	
     static void Init(Handle<Object> target);
 
     static NAN_METHOD(Undistort);
@@ -14,6 +16,8 @@ public:
     static NAN_METHOD(InitUndistortRectifyMap);
 
     static NAN_METHOD(Remap);
+
+    static NAN_METHOD(CalcHist);
 };
 
 #endif

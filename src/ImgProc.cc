@@ -1,5 +1,13 @@
 #include "ImgProc.h"
 #include "Matrix.h"
+#include <iostream>                                                                                                                                 
+#include "v8.h"
+#include "node.h"
+#include <string>
+#include <vector>
+using namespace std;
+using namespace v8;
+using namespace node;
 
 void ImgProc::Init(Handle<Object> target)
 {
@@ -10,6 +18,7 @@ void ImgProc::Init(Handle<Object> target)
     NODE_SET_METHOD(obj, "undistort", Undistort);
     NODE_SET_METHOD(obj, "initUndistortRectifyMap", InitUndistortRectifyMap);
     NODE_SET_METHOD(obj, "remap", Remap);
+    NODE_SET_METHOD(obj, "calcHist", CalcHist);
 
     target->Set(NanNew("imgproc"), obj);
 }
@@ -166,4 +175,121 @@ NAN_METHOD(ImgProc::Remap)
         NanThrowError(err_msg);
         NanReturnUndefined();
     }
+}
+
+// by piercus
+/*int* setIntegerArray(v8::Local<v8::Value> objArray) {
+
+    if(!objArray->IsArray()) {
+        // to do throw an error
+        printf("error");
+        return  0;
+    }
+
+    Handle<Array> wrap = Handle<Array>::Cast(objArray);
+    Handle<Value> val;
+
+    const unsigned int length = wrap->Length();
+    int res[length];
+
+    for (unsigned int i = 0; i < length; i++) {
+        val = wrap->Get(i);
+        res[i]=val->Uint32Value();
+    }
+
+    return res;
+}*/
+
+//cv::calcHist
+NAN_METHOD(ImgProc::CalcHist){
+    NanEscapableScope();
+
+    try {
+        // Get the arguments
+
+        // Arg 0 is the image
+        Matrix* m0 = ObjectWrap::Unwrap<Matrix>(args[0]->ToObject());
+        cv::Mat inputImage = m0->mat;
+
+        // Arg 1 is the nimages
+        int nimages = args[1]->IntegerValue();
+
+        // Arg 2 List of the dims channels used to compute the histogram. 
+        //The first array channels are numerated from 0 to images[0].channels()-1 , 
+        //the second array channels are counted from images[0].channels() to images[0].channels() + images[1].channels()-1, and so on.
+        /*Local<Object> channels;
+        if(args[2]->IsArray()){
+            channels = args[0]->ToObject();
+        } else {
+            //const int* channels = 0;
+        }*/
+
+        int channels[] = {0, 1};
+
+        // Arg 3 is the second map for mask
+        Matrix* maskIn = ObjectWrap::Unwrap<Matrix>(args[3]->ToObject());
+        cv::Mat inputMask = cv::Mat(maskIn->mat);
+
+        //hardcoded arg 4
+        int dims = 1;
+
+        // Arg 5 is histSizes array
+
+        Handle<Array> histSizesWrap;
+        Handle<Value> val;
+        if(args[5]->IsArray()) {
+            //histSizesWrap = args[4]->ToObject();
+            histSizesWrap = Handle<Array>::Cast(args[5]);
+        }
+        const int length = histSizesWrap->Length();
+        int histSizes[length];
+
+        if(args[5]->IsArray()) {
+            for (unsigned int i = 0; i < histSizesWrap->Length(); i++) {
+                val = histSizesWrap->Get(i);
+                histSizes[i]=val->Uint32Value();
+            }
+        }
+
+        //int * histSizes = setIntegerArray(args[5]);
+
+        /*//std::array<int> histSizes;
+        int hbins = 30, sbins = 32;
+        int histSizes2[] = {hbins, sbins};
+        
+        if(histSizes2 == histSizes){
+
+        }*/   
+
+        // args 6 is hardcoded
+        //float sranges[] = { 0, 256 };
+        //const float* ranges[] = { sranges };
+
+        float hranges[] = { 0, 180 };
+        // saturation varies from 0 (black-gray-white) to
+        // 255 (pure spectrum color)
+        float sranges[] = { 0, 256 };
+        const float* ranges[] = { hranges, sranges };
+        
+        // Args 7, 8 (uniform and accumulate), skipping for now
+
+        // Output hist
+        cv::Mat hist;
+
+        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, histSizes, ranges, true, false);   
+
+        // Wrap the output hist
+        Local<Object> outHistWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();
+        Matrix *outHist = ObjectWrap::Unwrap<Matrix>(outHistWrap);
+        outHist->mat = hist;
+
+        // Return the image
+        NanReturnValue(outHistWrap);
+
+    } catch (cv::Exception &e) {
+        const char *err_msg = e.what();
+        NanThrowError(err_msg);
+        NanReturnUndefined();
+    }
+
 }
