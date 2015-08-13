@@ -178,28 +178,6 @@ NAN_METHOD(ImgProc::Remap)
 }
 
 // by piercus
-/*int* setIntegerArray(v8::Local<v8::Value> objArray) {
-
-    if(!objArray->IsArray()) {
-        // to do throw an error
-        printf("error");
-        return  0;
-    }
-
-    Handle<Array> wrap = Handle<Array>::Cast(objArray);
-    Handle<Value> val;
-
-    const unsigned int length = wrap->Length();
-    int res[length];
-
-    for (unsigned int i = 0; i < length; i++) {
-        val = wrap->Get(i);
-        res[i]=val->Uint32Value();
-    }
-
-    return res;
-}*/
-
 //cv::calcHist
 NAN_METHOD(ImgProc::CalcHist){
     NanEscapableScope();
@@ -217,66 +195,58 @@ NAN_METHOD(ImgProc::CalcHist){
         // Arg 2 List of the dims channels used to compute the histogram. 
         //The first array channels are numerated from 0 to images[0].channels()-1 , 
         //the second array channels are counted from images[0].channels() to images[0].channels() + images[1].channels()-1, and so on.
-        /*Local<Object> channels;
-        if(args[2]->IsArray()){
+        
+        /*
+        if(!args[2]->IsArray()){
             channels = args[0]->ToObject();
-        } else {
-            //const int* channels = 0;
-        }*/
+        } */
 
-        int channels[] = {0, 1};
+        v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
+
+        unsigned int L0 = jsChannels->Length();
+        int channels[L0];
+        for (unsigned int i = 0; i < L0; i++) {
+           channels[i] = jsChannels->Get(i)->Uint32Value();
+        }  
 
         // Arg 3 is the second map for mask
         Matrix* maskIn = ObjectWrap::Unwrap<Matrix>(args[3]->ToObject());
         cv::Mat inputMask = cv::Mat(maskIn->mat);
 
-        //hardcoded arg 4
-        int dims = 1;
+        //Arg 4 is dims
+        int dims = args[4]->IntegerValue();
 
         // Arg 5 is histSizes array
+        v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
 
-        Handle<Array> histSizesWrap;
-        Handle<Value> val;
-        if(args[5]->IsArray()) {
-            //histSizesWrap = args[4]->ToObject();
-            histSizesWrap = Handle<Array>::Cast(args[5]);
-        }
-        const int length = histSizesWrap->Length();
-        int histSizes[length];
-
-        if(args[5]->IsArray()) {
-            for (unsigned int i = 0; i < histSizesWrap->Length(); i++) {
-                val = histSizesWrap->Get(i);
-                histSizes[i]=val->Uint32Value();
-            }
-        }
-
-        //int * histSizes = setIntegerArray(args[5]);
-
-        /*//std::array<int> histSizes;
-        int hbins = 30, sbins = 32;
-        int histSizes2[] = {hbins, sbins};
-        
-        if(histSizes2 == histSizes){
-
-        }*/   
+        unsigned int L1 = jsHistSizes->Length();
+        int vHistSizes[L1];
+        for (unsigned int i = 0; i < L1; i++) {
+           vHistSizes[i] = jsHistSizes->Get(i)->Uint32Value();
+        }  
 
         // args 6 is hardcoded
-        //float sranges[] = { 0, 256 };
-        //const float* ranges[] = { sranges };
+        v8::Handle<v8::Array> jsRanges = v8::Handle<v8::Array>::Cast(args[6]);
 
-        float hranges[] = { 0, 180 };
-        // saturation varies from 0 (black-gray-white) to
-        // 255 (pure spectrum color)
-        float sranges[] = { 0, 256 };
-        const float* ranges[] = { hranges, sranges };
-        
-        // Args 7, 8 (uniform and accumulate), skipping for now
+        unsigned int L2 = jsRanges->Length();
+        const float* ranges[L2];
+        float sranges[L2][2];
+        for (unsigned int i = 0; i < L2; i++) {
+            sranges[i][0] = jsRanges->Get(i)->ToObject()->Get(0)->NumberValue();
+            sranges[i][1]= jsRanges->Get(i)->ToObject()->Get(1)->NumberValue(); 
+            ranges[i] = sranges[i];
+        }
+
+        // Args 7 uniform 
+        bool uniform = (args.Length() >= 8) ? args[7]->BooleanValue() : true;
+
+        // Args 8 accumulated doesn't mean anything from js
+        bool accumulated = false;
 
         // Output hist
         cv::Mat hist;
 
-        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, histSizes, ranges, true, false);   
+        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, vHistSizes, ranges, uniform, accumulated);   
 
         // Wrap the output hist
         Local<Object> outHistWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();

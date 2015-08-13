@@ -87,9 +87,8 @@ cv.readImage('./files/mona.png', function(err, im) {
     for( var s = 0; s < sbins; s++ ){
       var binVal = hist.get(h, s);
       var intensity = Math.floor(binVal*255/maxVal);
-
+      
       //console.log(intensity);
-
       histImg.rectangle([h*scale, s*scale],
         [(h+1)*scale - 1, (s+1)*scale - 1],
         [intensity, intensity, intensity],
