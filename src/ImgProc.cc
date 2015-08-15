@@ -196,23 +196,24 @@ NAN_METHOD(ImgProc::CalcHist){
         // Arg 2 List of the dims channels used to compute the histogram. 
         //The first array channels are numerated from 0 to images[0].channels()-1 , 
         //the second array channels are counted from images[0].channels() to images[0].channels() + images[1].channels()-1, and so on.
-        
-        /*
-        if(!args[2]->IsArray()){
-            channels = args[0]->ToObject();
-        } */
+        unsigned int L0;
+        if(args[2]->IsArray()){
+            v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
+            L0 = jsChannels->Length();
+        } else {
+            L0 = 1;
+        }
 
-        //v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
+        int channels[L0];
 
-        //unsigned int L0 = jsChannels->Length();
-        const int * channels = 0;//[L0];
-
-        /*if(args[2]->IsArray()){
+        if(args[2]->IsArray()){
+            v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
             for (unsigned int i = 0; i < L0; i++) {
                channels[i] = jsChannels->Get(i)->Uint32Value();
-            }  
-        }*/
-
+            } 
+        } else {
+            channels[0] = args[2]->Uint32Value();
+        }
 
         // Arg 3 is the second map for mask
         Matrix* maskIn = ObjectWrap::Unwrap<Matrix>(args[3]->ToObject());
@@ -222,15 +223,28 @@ NAN_METHOD(ImgProc::CalcHist){
         int dims = args[4]->IntegerValue();
 
         // Arg 5 is histSizes array
-        //v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
+        
+        
+        unsigned int L1;
+        
+        if(args[5]->IsArray()){    
+            v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
+            L1 = jsHistSizes->Length();
+        } else {
+            L1 = 1;
+        }
 
-        //unsigned int L1 = jsHistSizes->Length();
-        int vHistSizes = 256;//[L1];
-        //if(args[5]->IsArray()){
-        //    for (unsigned int i = 0; i < L1; i++) {
-        //       vHistSizes[i] = jsHistSizes->Get(i)->Uint32Value();
-        //    }              
-        //}
+        int vHistSizes[L1];
+        
+
+        if(args[5]->IsArray()){
+            v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
+            for (unsigned int i = 0; i < L1; i++) {
+               vHistSizes[i] = jsHistSizes->Get(i)->Uint32Value();
+            }   
+        } else {
+            vHistSizes[0] = args[5]->IntegerValue();
+        }
 
 
         // args 6 is hardcoded
@@ -254,7 +268,7 @@ NAN_METHOD(ImgProc::CalcHist){
         // Output hist
         cv::Mat hist;
 
-        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, &vHistSizes, ranges, uniform, accumulated);   
+        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, vHistSizes, ranges, uniform, accumulated);   
 
         // Wrap the output hist
         Local<Object> outHistWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();
