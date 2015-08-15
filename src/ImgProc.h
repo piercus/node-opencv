@@ -18,6 +18,8 @@ public:
     static NAN_METHOD(Remap);
 
     static NAN_METHOD(CalcHist);
+
+    static NAN_METHOD(Normalize);
 };
 
 #endif

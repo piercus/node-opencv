@@ -169,6 +169,10 @@ Matrix::DblGet(cv::Mat mat, int i, int j){
       val = (double) pint;
       break;
 
+    case CV_32F:
+      val = mat.at<float>(i,j);
+      break;
+
     case CV_64FC1:
       val = mat.at<double>(i, j);
       break;

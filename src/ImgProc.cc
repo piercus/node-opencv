@@ -19,6 +19,7 @@ void ImgProc::Init(Handle<Object> target)
     NODE_SET_METHOD(obj, "initUndistortRectifyMap", InitUndistortRectifyMap);
     NODE_SET_METHOD(obj, "remap", Remap);
     NODE_SET_METHOD(obj, "calcHist", CalcHist);
+    NODE_SET_METHOD(obj, "normalize", Normalize);
 
     target->Set(NanNew("imgproc"), obj);
 }
@@ -201,13 +202,17 @@ NAN_METHOD(ImgProc::CalcHist){
             channels = args[0]->ToObject();
         } */
 
-        v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
+        //v8::Handle<v8::Array> jsChannels = v8::Handle<v8::Array>::Cast(args[2]);
 
-        unsigned int L0 = jsChannels->Length();
-        int channels[L0];
-        for (unsigned int i = 0; i < L0; i++) {
-           channels[i] = jsChannels->Get(i)->Uint32Value();
-        }  
+        //unsigned int L0 = jsChannels->Length();
+        const int * channels = 0;//[L0];
+
+        /*if(args[2]->IsArray()){
+            for (unsigned int i = 0; i < L0; i++) {
+               channels[i] = jsChannels->Get(i)->Uint32Value();
+            }  
+        }*/
+
 
         // Arg 3 is the second map for mask
         Matrix* maskIn = ObjectWrap::Unwrap<Matrix>(args[3]->ToObject());
@@ -217,13 +222,16 @@ NAN_METHOD(ImgProc::CalcHist){
         int dims = args[4]->IntegerValue();
 
         // Arg 5 is histSizes array
-        v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
+        //v8::Handle<v8::Array> jsHistSizes = v8::Handle<v8::Array>::Cast(args[5]);
 
-        unsigned int L1 = jsHistSizes->Length();
-        int vHistSizes[L1];
-        for (unsigned int i = 0; i < L1; i++) {
-           vHistSizes[i] = jsHistSizes->Get(i)->Uint32Value();
-        }  
+        //unsigned int L1 = jsHistSizes->Length();
+        int vHistSizes = 256;//[L1];
+        //if(args[5]->IsArray()){
+        //    for (unsigned int i = 0; i < L1; i++) {
+        //       vHistSizes[i] = jsHistSizes->Get(i)->Uint32Value();
+        //    }              
+        //}
+
 
         // args 6 is hardcoded
         v8::Handle<v8::Array> jsRanges = v8::Handle<v8::Array>::Cast(args[6]);
@@ -246,7 +254,7 @@ NAN_METHOD(ImgProc::CalcHist){
         // Output hist
         cv::Mat hist;
 
-        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, vHistSizes, ranges, uniform, accumulated);   
+        cv::calcHist(&inputImage, nimages, channels, inputMask, hist, dims, &vHistSizes, ranges, uniform, accumulated);   
 
         // Wrap the output hist
         Local<Object> outHistWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();
@@ -255,6 +263,50 @@ NAN_METHOD(ImgProc::CalcHist){
 
         // Return the image
         NanReturnValue(outHistWrap);
+
+    } catch (cv::Exception &e) {
+        const char *err_msg = e.what();
+        NanThrowError(err_msg);
+        NanReturnUndefined();
+    }
+
+}
+
+
+NAN_METHOD(ImgProc::Normalize){
+    NanEscapableScope();
+
+    try {
+        // Get the arguments
+
+        // Arg 0 is the image
+        Matrix* m0 = ObjectWrap::Unwrap<Matrix>(args[0]->ToObject());
+        cv::Mat src = m0->mat;
+
+        // Arg 1 is the nimages
+        double alpha = args[1]->IntegerValue();
+        double beta = args[2]->IntegerValue();
+        // for normType see values in http://docs.opencv.org/java/constant-values.html#org.opencv.core.Core.NORM_MINMAX
+        int normType = args[3]->IntegerValue();
+        int dtype = args[4]->IntegerValue();
+
+        Matrix* m5 = ObjectWrap::Unwrap<Matrix>(args[5]->ToObject());
+        cv::Mat mask = m5->mat;        
+
+        // Output hist
+        cv::Mat dst;
+
+        cv::normalize(src, dst, alpha, beta, normType, dtype, mask);
+
+        // Wrap the output hist
+        Local<Object> outDstWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();
+        Matrix *outDst = ObjectWrap::Unwrap<Matrix>(outDstWrap);
+        outDst->mat = dst;
+
+
+
+        // Return the image
+        NanReturnValue(outDstWrap);
 
     } catch (cv::Exception &e) {
         const char *err_msg = e.what();
