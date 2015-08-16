@@ -38,6 +38,7 @@ Matrix::Init(Handle<Object> target) {
 	NODE_SET_PROTOTYPE_METHOD(ctor, "toBufferAsync", ToBufferAsync);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "ellipse", Ellipse);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "rectangle", Rectangle);
+	NODE_SET_PROTOTYPE_METHOD(ctor, "circle", Circle);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "line", Line);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "fillPoly", FillPoly);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "save", Save);
@@ -98,6 +99,7 @@ Matrix::Init(Handle<Object> target) {
   NODE_SET_PROTOTYPE_METHOD(ctor, "setWithMask", SetWithMask);
   NODE_SET_PROTOTYPE_METHOD(ctor, "meanWithMask", MeanWithMask);
   NODE_SET_PROTOTYPE_METHOD(ctor, "shift", Shift);
+  NODE_SET_PROTOTYPE_METHOD(ctor, "getType", GetType);
 
   target->Set(NanNew("Matrix"), ctor->GetFunction());
 };
@@ -669,6 +671,36 @@ NAN_METHOD(Matrix::Rectangle) {
 			thickness = args[3]->IntegerValue();
 
 		cv::rectangle(self->mat, cv::Point(x, y), cv::Point(x+width, y+height), color, thickness);
+	}
+
+	NanReturnNull();
+}
+
+NAN_METHOD(Matrix::Circle) {
+	SETUP_FUNCTION(Matrix)
+
+
+	if(args[0]->IsArray() && args[1]->IntegerValue()) {
+		Local<Object> xy = args[0]->ToObject();
+
+		int radius = args[1]->IntegerValue();
+
+		cv::Scalar color(0, 0, 255);
+
+		if(args[2]->IsArray()) {
+			Local<Object> objColor = args[2]->ToObject();
+			color = setColor(objColor);
+		}
+
+		int x = xy->Get(0)->IntegerValue();
+		int y = xy->Get(1)->IntegerValue();
+
+		int thickness = 1;
+
+		if(args[3]->IntegerValue())
+			thickness = args[3]->IntegerValue();
+
+		cv::circle(self->mat, cv::Point(x, y), radius, color, thickness);
 	}
 
 	NanReturnNull();
