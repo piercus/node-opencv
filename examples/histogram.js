@@ -22,8 +22,7 @@ cv.readImage("./files/histoImg.jpg", function(err, im){
   gHist = cv.imgproc.normalize(gHist, 0, histImage.col().length, 32, -1, new cv.Matrix());
   rHist = cv.imgproc.normalize(rHist, 0, histImage.col().length, 32, -1, new cv.Matrix());
 
-  for( var i = 1; i < histSize; i++ )
-  {
+  for( var i = 1; i < histSize; i++ ){
       var p1 = [binW*(i-1), histH - Math.round(bHist.get(i-1)) ],
           p2 = [binW*(i), histH - Math.round(bHist.get(i))];
           
