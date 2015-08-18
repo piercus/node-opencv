@@ -36,7 +36,7 @@ VideoCaptureWrap::Init(Handle<Object> target) {
 	NODE_SET_PROTOTYPE_METHOD(ctor, "setHeight", SetHeight);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "setPosition", SetPosition);
   NODE_SET_PROTOTYPE_METHOD(ctor, "close", Close);
-  NODE_SET_PROTOTYPE_METHOD(ctor, "ReadSync", ReadSync);
+  NODE_SET_PROTOTYPE_METHOD(ctor, "readSync", ReadSync);
 
 	target->Set(NanNew("VideoCapture"), ctor->GetFunction());
 };    

@@ -19,7 +19,9 @@
         "src/Constants.cc",
         "src/Calib3D.cc",
         "src/ImgProc.cc",
-        "src/Stereo.cc"
+        "src/Stereo.cc",
+        "src/OpticalFlow.cc",
+        "src/TCriteria.cc"
       ],
 
       "libraries": [

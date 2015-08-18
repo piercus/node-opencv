@@ -1,6 +1,7 @@
 #include "Contours.h"
 #include "Matrix.h"
 #include "OpenCV.h"
+#include "TCriteria.h"
 #include <nan.h>
 
 v8::Persistent<FunctionTemplate> Matrix::constructor;
@@ -71,6 +72,7 @@ Matrix::Init(Handle<Object> target) {
 	NODE_SET_PROTOTYPE_METHOD(ctor, "drawContour", DrawContour);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "drawAllContours", DrawAllContours);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "goodFeaturesToTrack", GoodFeaturesToTrack);
+	NODE_SET_PROTOTYPE_METHOD(ctor, "cornerSubPix", CornerSubPix);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "houghLinesP", HoughLinesP);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "crop", Crop);
 	NODE_SET_PROTOTYPE_METHOD(ctor, "houghCircles", HoughCircles);
@@ -160,6 +162,7 @@ Matrix::DblGet(cv::Mat mat, int i, int j){
 
   double val = 0;
   cv::Vec3b pix;
+  cv::Vec2b pix2b;
   unsigned int pint = 0;
 
   switch(mat.type()){
@@ -177,6 +180,14 @@ Matrix::DblGet(cv::Mat mat, int i, int j){
 
     case CV_64FC1:
       val = mat.at<double>(i, j);
+      break;
+
+    case CV_8UC1:
+      val = mat.at<char>(i, j);
+      break;
+
+    case CV_8UC3:
+      val = mat.at<char>(i, j);
       break;
 
     default:
@@ -1294,20 +1305,51 @@ NAN_METHOD(Matrix::DrawAllContours) {
 
 
 NAN_METHOD(Matrix::GoodFeaturesToTrack) {
-	NanScope();
+  NanScope();
 
-	Matrix *self = ObjectWrap::Unwrap<Matrix>(args.This());
+  Matrix *self = ObjectWrap::Unwrap<Matrix>(args.This());
+
+  //cv::Mat gray;
+  //cvtColor(self->mat, gray, CV_BGR2GRAY);
+  //equalizeHist(gray, gray);
+
+  //for node-opencv retrocompatibility, maxCorners is not mandatory
+  int maxCorners = 500;
+  if(args.Length() > 0){
+    maxCorners = args[0]->Uint32Value();
+  }
+  
+  //for node-opencv retrocompatibility, qualityLevel is not mandatory
+  double qualityLevel = 0.01;
+  if(args.Length() > 1){
+    maxCorners = args[1]->NumberValue();
+  } 
+
+  //for node-opencv retrocompatibility, minDistance is not mandatory
+  double minDistance = 10;
+  if(args.Length() > 2){
+    maxCorners = args[2]->NumberValue();
+  } 
+
+  //output
   std::vector<cv::Point2f> corners;
 
-  cv::Mat gray;
+  if(args.Length() > 6){
+    cv::Mat mask = ObjectWrap::Unwrap<Matrix>(args[3]->ToObject())->mat;
+    int blockSize = args[4]->IntegerValue();
+    bool useHarrisDetector = args[5]->BooleanValue();
+    double k = args[6]->NumberValue();
 
-	cvtColor(self->mat, gray, CV_BGR2GRAY);
-  equalizeHist(gray, gray);
+    //call it with all params
+    cv::goodFeaturesToTrack(self->mat, corners, maxCorners, qualityLevel, minDistance, mask, blockSize, useHarrisDetector, k);
 
-  cv::goodFeaturesToTrack(gray, corners, 500, 0.01, 10);
+  } else {
+    //call it with only 5 params
+    //cv::goodFeaturesToTrack(gray, corners, maxCorners, qualityLevel, minDistance);
+  
+  }
 
   v8::Local<v8::Array> arr = NanNew<Array>(corners.size());
-
 
   for (unsigned int i=0; i<corners.size(); i++){
     v8::Local<v8::Array> pt = NanNew<Array>(2);
@@ -1320,6 +1362,100 @@ NAN_METHOD(Matrix::GoodFeaturesToTrack) {
 
 }
 
+inline cv::Size sizeFromArray(Handle<Value> jsArray)
+{
+    cv::Size patternSize;
+
+    if (jsArray->IsArray())
+    {
+        Local<Object> v8sz = jsArray->ToObject();
+
+        patternSize = cv::Size(v8sz->Get(0)->IntegerValue(), v8sz->Get(1)->IntegerValue());
+    }
+    else
+    {
+        JSTHROW_TYPE("Size is not a valid array");
+    }
+
+    return patternSize;
+}
+
+NAN_METHOD(Matrix::CornerSubPix) {
+  NanScope();
+
+  try{
+
+    Matrix *self = ObjectWrap::Unwrap<Matrix>(args.This());
+	// extract quad args
+	
+	Local<Array> cornersArray = Local<Array>::Cast(args[0]->ToObject());
+	const unsigned int L = cornersArray->Length();
+	vector<cv::Point2f> corners;
+
+	for(unsigned int i = 0; i < L; i++){
+		Local<Array> cornerPoint = Local<Array>::Cast(cornersArray->Get(i)->ToObject());
+		cv::Point2f corner;
+		corner.x = cornerPoint->Get(0)->NumberValue();
+		corner.y = cornerPoint->Get(1)->NumberValue();
+		corners.push_back(corner);
+	}
+
+    cv::Size winSize = sizeFromArray(args[1]);
+    cv::Size zeroZone = sizeFromArray(args[2]);
+    
+    cv::TermCriteria criteria = ObjectWrap::Unwrap<TCriteria>(args[3]->ToObject())->tcriteria;
+    
+//    printf("count %i , eps %f, type %i\n",criteria.maxCount, criteria.epsilon, criteria.type);
+  	//cv::Mat gray;
+
+	//cvtColor(self->mat, gray, CV_BGR2GRAY);
+  	//equalizeHist(gray, gray);
+    /*printf("gray[0,0] %i, gray[0,1] %i, gray[1,0] %i, gray[1,1] %i\n", 
+        self->mat.at<char>(0,0), 
+        self->mat.at<char>(0,1), 
+        self->mat.at<char>(1,0),
+        self->mat.at<char>(1,1)
+    );*/
+
+/*    printf("x %f , y %f, size [%i,%i], zeroZone [%i,%i], criteria [%f,%i,%i]\n",
+    	corners[1].x, 
+    	corners[1].y, 
+    	winSize.width, 
+    	winSize.height,
+    	zeroZone.width,
+    	zeroZone.height,
+    	criteria.epsilon,
+    	criteria.type,
+    	criteria.maxCount);*/
+
+    cv::cornerSubPix(self->mat, corners, winSize, zeroZone, criteria);
+
+    //printf("after cornerSubPix; points[1][1], x %f , y %f\n",corners[1].x, corners[1].y);
+
+    // Wrap the output corners
+    // Local<Object> cornersWrap = NanNew(Matrix::constructor)->GetFunction()->NewInstance();
+    // Matrix *outCorners = ObjectWrap::Unwrap<Matrix>(cornersWrap);
+    // outCorners->mat = corners;
+    // NanReturnValue(cornersWrap);
+
+	v8::Local<v8::Array> arr = NanNew<Array>(corners.size());
+
+	for (unsigned int i=0; i<corners.size(); i++){
+		v8::Local<v8::Array> pt = NanNew<Array>(2);
+		pt->Set(0, NanNew<Number>((double) corners[i].x));
+		pt->Set(1, NanNew<Number>((double) corners[i].y));
+		arr->Set(i, pt);
+	}
+
+	NanReturnValue(arr);
+
+  } catch (cv::Exception &e) {
+    const char *err_msg = e.what();
+    NanThrowError(err_msg);
+    NanReturnUndefined();
+  }
+
+};
 
 NAN_METHOD(Matrix::HoughLinesP) {
 	NanScope();

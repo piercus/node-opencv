@@ -13,6 +13,8 @@
 #include "Calib3D.h"
 #include "ImgProc.h"
 #include "Stereo.h"
+#include "TCriteria.h"
+#include "OpticalFlow.h"
 
 extern "C" void
 init(Handle<Object> target) {
@@ -32,7 +34,8 @@ init(Handle<Object> target) {
     StereoBM::Init(target);
     StereoSGBM::Init(target);
     StereoGC::Init(target);
-
+    TCriteria::Init(target);
+    OpticalFlow::Init(target);
 
    #if CV_MAJOR_VERSION >= 2 && CV_MINOR_VERSION >=4
       Features::Init(target);
