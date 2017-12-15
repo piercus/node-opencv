@@ -5,13 +5,13 @@
   "author": "Peter Braden <peterbraden@peterbraden.co.uk>",
   "dependencies": {
     "buffers": "^0.1.1",
-    "istanbul": "0.4.5",
     "nan": "^2.0.9",
-    "node-pre-gyp": "^0.6.30"
+    "pre-gyp-find": "^0.6.0"
   },
   "devDependencies": {
     "tape": "^3.0.0",
     "aws-sdk": "~2.1.20",
+    "istanbul": "0.4.5",
     "glob": "^5.0.3",
     "request": "^2.44.0"
   },
